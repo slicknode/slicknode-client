@@ -53,7 +53,7 @@ if `localStorage` is not available in the current runtime (e.g. NodeJS).
 
 ```javascript
 import login from 'slicknode-client/auth/email-password';
-import client from 'slicknode-client';
+import Client from 'slicknode-client';
 
 const email = 'info@slicknode.com';
 const password = '12345';
@@ -71,7 +71,7 @@ client.authenticate(login(email, password))
 
 You can use any of the following authentication adapters or build your own: 
 
-- [Email / Password login](auth/email-password.md)
+- [Email / Password login](src/auth/email-password.md)
 
 Once a user is authenticated, the slicknode client automatically takes care of
 refreshing the access token in the background.
