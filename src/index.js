@@ -162,7 +162,7 @@ export default class Client {
   }
   
   /**
-   * Stores the refreshToken either in Session or LocalStorage
+   * Stores the refreshToken in the storage of the client
    * @param token
    */
   setRefreshToken(token: string) {
@@ -247,7 +247,7 @@ export default class Client {
   }
   
   /**
-   * Clears all tokens and local storage
+   * Clears all tokens in the storage
    */
   logout(): void {
     this.storage.removeItem(this.namespace + REFRESH_TOKEN_KEY);

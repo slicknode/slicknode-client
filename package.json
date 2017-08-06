@@ -12,6 +12,7 @@
     "check": "flow check",
     "watch": "npm run clean && babel -w --ignore __tests__ -d dist src",
     "clean": "rimraf dist/*",
+    "coverage": "NODE_PATH=src babel-node ./node_modules/.bin/babel-istanbul cover ./node_modules/.bin/_mocha $npm_package_options_mochacoverage",
     "test": "npm run lint && npm run check && npm run testonly",
     "testonly": "NODE_PATH=src babel-node ./node_modules/.bin/_mocha $npm_package_options_mocha",
     "dist": "npm run clean && babel --ignore __tests__ -d dist src && npm run build-dot-flow",
