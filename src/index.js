@@ -4,10 +4,12 @@
  * @flow
  */
 
-const REFRESH_TOKEN_KEY = 'auth:refreshToken';
-const REFRESH_TOKEN_EXPIRES_KEY = 'auth:refreshTokenExpires';
-const ACCESS_TOKEN_KEY = 'auth:accessToken';
-const ACCESS_TOKEN_EXPIRES_KEY = 'auth:accessTokenExpires';
+import 'isomorphic-fetch';
+
+const REFRESH_TOKEN_KEY = ':auth:refreshToken';
+const REFRESH_TOKEN_EXPIRES_KEY = ':auth:refreshTokenExpires';
+const ACCESS_TOKEN_KEY = ':auth:accessToken';
+const ACCESS_TOKEN_EXPIRES_KEY = ':auth:accessTokenExpires';
 
 const DEFAULT_NAMESPACE = 'slicknode';
 
@@ -57,6 +59,15 @@ type ClientOptions = {
   namespace?: string,
 }
 
+export const REFRESH_TOKEN_MUTATION = `mutation refreshToken($token: String!) {
+  refreshAuthToken(input: {refreshToken: $token}) {
+    accessToken
+    refreshToken
+    accessTokenLifetime
+    refreshTokenLifetime
+  }
+}`;
+
 /**
  * In memory storage
  */
@@ -89,6 +100,9 @@ export default class Client {
    * @param options
    */
   constructor(options: ClientOptions) {
+    if (!options || typeof options.endpoint !== 'string') {
+      throw new Error('You have to provide the endpoint of the GraphQL server to the client');
+    }
     this.options = options;
     this.namespace = options.namespace || DEFAULT_NAMESPACE;
     this.storage = options.storage || global.localStorage || new MemoryStorage();
@@ -103,6 +117,7 @@ export default class Client {
    * @returns {Promise.<void>}
    */
   async fetch(query: string, variables?: Object = {}): Promise<Object> {
+    const authHeaders = query !== REFRESH_TOKEN_MUTATION ? await this.getAuthHeaders() : {};
     const result = await fetch(
       this.options.endpoint,
       {
@@ -110,7 +125,7 @@ export default class Client {
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          ...await this.getAuthHeaders(),
+          ...authHeaders,
           ...(this.options.headers || {})
         },
         credentials: 'same-origin',
@@ -131,7 +146,7 @@ export default class Client {
    */
   async authenticate(authenticator: Authenticator): Promise<*> {
     const tokenSet = await authenticator(this);
-    this.updateAuthTokens(tokenSet);
+    this.setAuthTokenSet(tokenSet);
     return tokenSet;
   }
   
@@ -139,7 +154,7 @@ export default class Client {
    * Updates the auth token set
    * @param token
    */
-  updateAuthTokens(token: AuthTokenSet): void {
+  setAuthTokenSet(token: AuthTokenSet): void {
     this.setAccessToken(token.accessToken);
     this.setAccessTokenExpires(token.accessTokenLifetime * 1000 + Date.now());
     this.setRefreshToken(token.refreshToken);
@@ -151,7 +166,7 @@ export default class Client {
    * @param token
    */
   setRefreshToken(token: string) {
-    const key = this.namespace + ':' + REFRESH_TOKEN_KEY;
+    const key = this.namespace + REFRESH_TOKEN_KEY;
     this.storage.setItem(key, token);
   }
 
@@ -163,15 +178,15 @@ export default class Client {
     if ((this.getRefreshTokenExpires() || 0) < Date.now()) {
       return null;
     }
-    const key = this.namespace + ':' + REFRESH_TOKEN_KEY;
-    this.storage.getItem(key);
+    const key = this.namespace + REFRESH_TOKEN_KEY;
+    return this.storage.getItem(key);
   }
   
   /**
    * Sets the time when the auth token expires
    */
   setAccessTokenExpires(timestamp: ?number) {
-    const key = this.namespace + ':' + ACCESS_TOKEN_EXPIRES_KEY;
+    const key = this.namespace + ACCESS_TOKEN_EXPIRES_KEY;
     if (timestamp) {
       this.storage.setItem(key, String(timestamp));
     } else {
@@ -184,7 +199,7 @@ export default class Client {
    * @returns {number|null}
    */
   getRefreshTokenExpires(): ?number {
-    const key = this.namespace + ':' + REFRESH_TOKEN_EXPIRES_KEY;
+    const key = this.namespace + REFRESH_TOKEN_EXPIRES_KEY;
     const expires = this.storage.getItem(key);
     return expires ? parseInt(expires, 10) : null;
   }
@@ -195,7 +210,7 @@ export default class Client {
   setRefreshTokenExpires(
     timestamp: ?number
   ): void {
-    const key = this.namespace + ':' + REFRESH_TOKEN_EXPIRES_KEY;
+    const key = this.namespace + REFRESH_TOKEN_EXPIRES_KEY;
     this.storage.setItem(key, String(timestamp));
   }
   
@@ -204,7 +219,7 @@ export default class Client {
    * @returns {number|null}
    */
   getAccessTokenExpires(): ?number {
-    const key = this.namespace + ':' + ACCESS_TOKEN_EXPIRES_KEY;
+    const key = this.namespace + ACCESS_TOKEN_EXPIRES_KEY;
     const expires = this.storage.getItem(key) || null;
     return expires ? parseInt(expires, 10) : null;
   }
@@ -214,7 +229,7 @@ export default class Client {
    * @param token
    */
   setAccessToken(token: string): void {
-    const key = this.namespace + ':' + ACCESS_TOKEN_KEY;
+    const key = this.namespace + ACCESS_TOKEN_KEY;
     this.storage.setItem(key, token);
   }
   
@@ -223,7 +238,11 @@ export default class Client {
    * @returns {null}
    */
   getAccessToken(): ?string {
-    const key = this.namespace + ':' + ACCESS_TOKEN_KEY;
+    // Check if is expired
+    if ((this.getAccessTokenExpires() || 0) < Date.now()) {
+      return null;
+    }
+    const key = this.namespace + ACCESS_TOKEN_KEY;
     return this.storage.getItem(key) || null;
   }
   
@@ -231,7 +250,10 @@ export default class Client {
    * Clears all tokens and local storage
    */
   logout(): void {
-    this.storage.clear();
+    this.storage.removeItem(this.namespace + REFRESH_TOKEN_KEY);
+    this.storage.removeItem(this.namespace + REFRESH_TOKEN_EXPIRES_KEY);
+    this.storage.removeItem(this.namespace + ACCESS_TOKEN_KEY);
+    this.storage.removeItem(this.namespace + ACCESS_TOKEN_EXPIRES_KEY);
   }
   
   /**
@@ -245,38 +267,10 @@ export default class Client {
     
     // We have no token, try to get it from API
     if (!accessToken && refreshToken) {
-      // We have refresh token but expired auth token. Get new access token.
-      const result = await fetch(
-        this.options.endpoint,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          credentials: 'same-origin',
-          body: JSON.stringify({
-            query: `mutation refreshToken($input: refreshAuthTokenInput!) {
-              refreshAuthToken(input: $input) {
-                accessToken
-                refreshToken
-                accessTokenLifetime
-                refreshTokenLifetime
-              }
-            }`,
-            variables: {
-              input: {
-                refreshToken: this.getRefreshToken()
-              }
-            }
-          })
-        }
-      );
-      const tokenData = await result.json();
-      if (tokenData && tokenData.data && tokenData.data.refreshAuthToken) {
-        this.updateAuthTokens(tokenData.data.refreshAuthToken);
-        
-        // Refetch token
+      // We have refresh token but expired auth token. Refresh auth token set.
+      const result = await this.fetch(REFRESH_TOKEN_MUTATION, {token: refreshToken});
+      if (result && result.data && result.data.refreshAuthToken) {
+        this.setAuthTokenSet(result.data.refreshAuthToken);
         accessToken = this.getAccessToken();
       } else {
         this.logout();
