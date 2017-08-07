@@ -151,6 +151,24 @@ export default class Client {
   }
   
   /**
+   * Returns true if the client has a valid access token
+   *
+   * @returns {boolean}
+   */
+  hasAccessToken(): boolean {
+    return Boolean(this.getAccessToken());
+  }
+  
+  /**
+   * Returns true if the client has a valid refresh token
+   *
+   * @returns {boolean}
+   */
+  hasRefreshToken(): boolean {
+    return Boolean(this.getRefreshToken());
+  }
+  
+  /**
    * Updates the auth token set
    * @param token
    */
