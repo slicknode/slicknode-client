@@ -19,6 +19,9 @@
     "build-dot-flow": "find ./src -name '*.js' -not -path '*/__tests__*' | while read filepath; do cp $filepath `echo $filepath | sed 's/\\/src\\//\\/dist\\//g'`.flow; done",
     "prepublish": "npm run clean && npm run dist"
   },
+  "directories": {
+    "lib": "./dist"
+  },
   "dependencies": {
     "isomorphic-fetch": "^2.2.1"
   },
@@ -28,7 +31,7 @@
     "README.md",
     "LICENSE"
   ],
-  "repository": "ivome/slicknode-cli",
+  "repository": "ivome/slicknode-client",
   "keywords": [
     "graphql",
     "slicknode"
