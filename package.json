@@ -6,7 +6,7 @@
     "mocha": "--check-leaks --full-trace src/**/__tests__/**/*-test.js",
     "mochacoverage": "-t 100000 --check-leaks --full-trace src/**/__*__/**/*-test.js"
   },
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "lint": "eslint src",
     "check": "flow check",
@@ -18,9 +18,6 @@
     "dist": "npm run clean && babel --ignore __tests__ -d dist src && npm run build-dot-flow",
     "build-dot-flow": "find ./src -name '*.js' -not -path '*/__tests__*' | while read filepath; do cp $filepath `echo $filepath | sed 's/\\/src\\//\\/dist\\//g'`.flow; done",
     "prepublish": "npm run clean && npm run dist"
-  },
-  "directories": {
-    "lib": "./dist"
   },
   "dependencies": {
     "isomorphic-fetch": "^2.2.1"
