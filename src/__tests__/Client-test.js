@@ -39,6 +39,36 @@ describe('Client', () => {
     runTest().then(done).catch(done);
   });
   
+  it('Should upload files', done => {
+    async function runTest() {
+      const client = new Client({endpoint});
+      const query = 'query Node($id: ID!) { node(id: $id) {id: "123"}}';
+      const variables = {id: '123'};
+      const result = {data: {node: {id: '123'}}};
+      const request = nock(endpoint)
+        .post('/', body => {
+          return (
+            String(body).includes('Content-Disposition: form-data; name="variables"\r\n\r\n{"id":"123"}') &&
+            String(body).includes(`Content-Disposition: form-data; name="query"\r\n\r\n${query}`) &&
+            String(body).includes('Content-Disposition: form-data; name="file"\r\n\r\nabcdef')
+          );
+        })
+        .reply(200, result);
+      
+      const clientResult = await client.fetch(
+        query,
+        variables,
+        {
+          file: 'abcdef'
+        }
+      );
+      
+      request.done();
+      expect(result).to.deep.equal(clientResult);
+    }
+    runTest().then(done).catch(done);
+  });
+  
   it('Should throw an error with no provided endpoint', () => {
     /* eslint-disable no-unused-vars */
     expect(() => {

@@ -5,6 +5,7 @@
  */
 
 import 'isomorphic-fetch';
+import 'isomorphic-form-data';
 
 const REFRESH_TOKEN_KEY = ':auth:refreshToken';
 const REFRESH_TOKEN_EXPIRES_KEY = ':auth:refreshTokenExpires';
@@ -31,6 +32,9 @@ export type AuthTokenSet = {
 }
 
 export type Authenticator = (client: Client) => Promise<AuthTokenSet>;
+
+export type Uploadable = File | Blob | Buffer | string;
+export type UploadableMap = {[key: string]: Uploadable};
 
 type ClientOptions = {
   /**
@@ -114,26 +118,48 @@ export default class Client {
    *
    * @param query
    * @param variables
+   * @param files
    * @returns {Promise.<void>}
    */
-  async fetch(query: string, variables?: Object = {}): Promise<Object> {
+  async fetch(
+    query: string,
+    variables?: Object = {},
+    files?: UploadableMap = {}
+  ): Promise<Object> {
     const authHeaders = query !== REFRESH_TOKEN_MUTATION ? await this.getAuthHeaders() : {};
+    
+    const config: Object = {
+      method: 'POST',
+      headers: {
+        ...authHeaders,
+        ...(this.options.headers || {})
+      },
+      credentials: 'same-origin',
+    };
+    
+    // We have files, send request as multipart
+    if (files && Object.keys(files).length > 0) {
+      const data = new FormData();
+      Object.keys(files).forEach((name => {
+        // $FlowFixMe:
+        data.append(name, files[name]);
+      }));
+      data.append('query', query);
+      data.append('variables', JSON.stringify(variables));
+      config.body = data;
+    } else {
+      // Send as normal POST request
+      config.body = JSON.stringify({
+        query,
+        variables: variables || {}
+      });
+      config.headers['Content-Type'] = 'application/json';
+      config.headers['Accept'] = 'application/json';
+    }
+    
     const result = await fetch(
       this.options.endpoint,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          ...authHeaders,
-          ...(this.options.headers || {})
-        },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          query,
-          variables: variables || {}
-        })
-      }
+      config
     );
     return await result.json();
   }
