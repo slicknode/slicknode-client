@@ -39,7 +39,7 @@ describe('Client', () => {
     runTest().then(done).catch(done);
   });
   
-  it('Should upload files', done => {
+  it('Should upload files from string', done => {
     async function runTest() {
       const client = new Client({endpoint});
       const query = 'query Node($id: ID!) { node(id: $id) {id: "123"}}';
@@ -50,7 +50,7 @@ describe('Client', () => {
           return (
             String(body).includes('Content-Disposition: form-data; name="variables"\r\n\r\n{"id":"123"}') &&
             String(body).includes(`Content-Disposition: form-data; name="query"\r\n\r\n${query}`) &&
-            String(body).includes('Content-Disposition: form-data; name="file"\r\n\r\nabcdef')
+            String(body).includes('Content-Disposition: form-data; name="file"; filename="data.bin"\r\nContent-Type: application/octet-stream\r\n\r\nabcdef')
           );
         })
         .reply(200, result);
@@ -60,6 +60,36 @@ describe('Client', () => {
         variables,
         {
           file: 'abcdef'
+        }
+      );
+      
+      request.done();
+      expect(result).to.deep.equal(clientResult);
+    }
+    runTest().then(done).catch(done);
+  });
+  
+  it('Should upload files from Buffer', done => {
+    async function runTest() {
+      const client = new Client({endpoint});
+      const query = 'query Node($id: ID!) { node(id: $id) {id: "123"}}';
+      const variables = {id: '123'};
+      const result = {data: {node: {id: '123'}}};
+      const request = nock(endpoint)
+        .post('/', body => {
+          return (
+            String(body).includes('Content-Disposition: form-data; name="variables"\r\n\r\n{"id":"123"}') &&
+            String(body).includes(`Content-Disposition: form-data; name="query"\r\n\r\n${query}`) &&
+            String(body).includes('Content-Disposition: form-data; name="file"; filename="data.bin"\r\nContent-Type: application/octet-stream\r\n\r\nbuffer')
+          );
+        })
+        .reply(200, result);
+      
+      const clientResult = await client.fetch(
+        query,
+        variables,
+        {
+          file: Buffer.from([ 0x62, 0x75, 0x66, 0x66, 0x65, 0x72 ])
         }
       );
       

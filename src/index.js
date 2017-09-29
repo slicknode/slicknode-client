@@ -141,8 +141,15 @@ export default class Client {
     if (files && Object.keys(files).length > 0) {
       const data = new FormData();
       Object.keys(files).forEach((name => {
-        // $FlowFixMe:
-        data.append(name, files[name]);
+        const file = files[name];
+        // If we have buffer or string, add filename
+        if (typeof Buffer !== 'undefined' && Buffer.isBuffer(file) || typeof file === 'string') {
+          // $FlowFixMe:
+          data.append(name, file, 'data.bin');
+        } else {
+          // $FlowFixMe:
+          data.append(name, file);
+        }
       }));
       data.append('query', query);
       data.append('variables', JSON.stringify(variables));
