@@ -1,6 +1,6 @@
 # Slicknode GraphQL Client
 
-A leightweight client to make requests to a slicknode GraphQL endpoint.
+A lightweight client to make requests to a slicknode GraphQL server.
 
 ## Installation
 
@@ -52,15 +52,15 @@ if `localStorage` is not available in the current runtime (e.g. NodeJS).
 #### Example: Email password login
 
 ```javascript
-import login from 'slicknode-client/auth/email-password';
+import loginEmailPassword from 'slicknode-client/auth/email-password';
 import Client from 'slicknode-client';
 
 const email = 'info@slicknode.com';
-const password = '12345';
+const password = '12345xyz';
 const client = new Client({
   endpoint: 'http://myproject.slicknode.com/'
 });
-client.authenticate(login(email, password))
+client.authenticate(loginEmailPassword(email, password))
   .then(() => {
     console.log('Login was successful');
   })
