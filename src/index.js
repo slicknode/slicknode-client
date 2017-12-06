@@ -17,7 +17,7 @@ const DEFAULT_NAMESPACE = 'slicknode';
 /**
  * Interface for custom storage
  */
-interface Storage {
+export interface Storage {
   getItem(keyName: string): ?string;
   setItem(keyName: string, keyValue: string): void;
   removeItem(keyName: string): void;
@@ -36,7 +36,7 @@ export type Authenticator = (client: Client) => Promise<AuthTokenSet>;
 export type Uploadable = File | Blob | Buffer | string;
 export type UploadableMap = {[key: string]: Uploadable};
 
-type ClientOptions = {
+export type ClientOptions = {
   /**
    * The slicknode GraphQL endpoint URL
    */
@@ -75,7 +75,7 @@ export const REFRESH_TOKEN_MUTATION = `mutation refreshToken($token: String!) {
 /**
  * In memory storage
  */
-class MemoryStorage {
+export class MemoryStorage {
   values: Object;
   constructor() {
     this.values = {};
