@@ -150,6 +150,39 @@ describe('Client', () => {
     runTest().then(done).catch(done);
   });
   
+  it('Should send permanent access token in header', done => {
+    async function runTest() {
+      const accessToken = '12345abcde';
+      const client = new Client({
+        endpoint,
+        accessToken
+      });
+      
+      const query = 'query Node($id: ID!) { node(id: $id) {id: "123"}}';
+      const variables = {id: '123'};
+      const result = {data: {node: {id: '123'}}};
+      const request = nock(endpoint, {
+        reqheaders: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      })
+        .post('/', {
+          query,
+          variables
+        })
+        .reply(200, result);
+      
+      const clientResult = await client.fetch(
+        query,
+        variables
+      );
+      
+      request.done();
+      expect(result).to.deep.equal(clientResult);
+    }
+    runTest().then(done).catch(done);
+  });
+  
   it('Should clear tokens on logout', done => {
     async function runTest() {
       const client = new Client({endpoint});

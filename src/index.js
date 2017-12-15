@@ -61,6 +61,11 @@ export type ClientOptions = {
    * The namespace under which auth tokens are stored
    */
   namespace?: string,
+  
+  /**
+   * Use a permanent access token for authentication
+   */
+  accessToken?: string,
 }
 
 export const REFRESH_TOKEN_MUTATION = `mutation refreshToken($token: String!) {
@@ -313,7 +318,7 @@ export default class Client {
    * with the refreshToken
    */
   async getAuthHeaders(): Promise<Object> {
-    let accessToken = this.getAccessToken();
+    let accessToken = this.options.accessToken || this.getAccessToken();
     const refreshToken = this.getRefreshToken();
     
     // We have no token, try to get it from API
