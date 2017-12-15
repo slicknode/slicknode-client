@@ -39,6 +39,35 @@ describe('Client', () => {
     runTest().then(done).catch(done);
   });
   
+  it('Should send a request with operationName', done => {
+    async function runTest() {
+      const client = new Client({endpoint});
+      const query = 'query Node($id: ID!) { node(id: $id) {id: "123"}} query SomeOtherQuery{viewer{user{id}}}';
+      const operationName = 'Node';
+      const variables = {id: '123'};
+      const result = {data: {node: {id: '123'}}};
+      const request = nock(endpoint, {
+        badheaders: [ 'Authorization' ]
+      })
+        .post('/', {
+          query,
+          variables,
+          operationName
+        })
+        .reply(200, result);
+      
+      const clientResult = await client.fetch(
+        query,
+        variables,
+        operationName
+      );
+      
+      request.done();
+      expect(result).to.deep.equal(clientResult);
+    }
+    runTest().then(done).catch(done);
+  });
+  
   it('Should upload files from string', done => {
     async function runTest() {
       const client = new Client({endpoint});
@@ -58,6 +87,7 @@ describe('Client', () => {
       const clientResult = await client.fetch(
         query,
         variables,
+        null,
         {
           file: 'abcdef'
         }
@@ -88,6 +118,7 @@ describe('Client', () => {
       const clientResult = await client.fetch(
         query,
         variables,
+        null,
         {
           file: Buffer.from([ 0x62, 0x75, 0x66, 0x66, 0x65, 0x72 ])
         }

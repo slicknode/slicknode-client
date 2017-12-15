@@ -123,12 +123,14 @@ export default class Client {
    *
    * @param query
    * @param variables
+   * @param operationName
    * @param files
    * @returns {Promise.<void>}
    */
   async fetch(
     query: string,
     variables?: Object = {},
+    operationName?: ?string = null,
     files?: UploadableMap = {}
   ): Promise<Object> {
     const authHeaders = query !== REFRESH_TOKEN_MUTATION ? await this.getAuthHeaders() : {};
@@ -158,12 +160,16 @@ export default class Client {
       }));
       data.append('query', query);
       data.append('variables', JSON.stringify(variables));
+      if (operationName) {
+        data.append('operationName', operationName);
+      }
       config.body = data;
     } else {
       // Send as normal POST request
       config.body = JSON.stringify({
         query,
-        variables: variables || {}
+        variables: variables || {},
+        ...(operationName ? {operationName} : {})
       });
       config.headers['Content-Type'] = 'application/json';
       config.headers['Accept'] = 'application/json';
