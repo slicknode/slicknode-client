@@ -9,6 +9,7 @@ import Client, {
   REFRESH_TOKEN_MUTATION
 } from '../index';
 import { expect } from 'chai';
+import { describe, it } from 'mocha';
 
 const endpoint = 'https://dummyhost';
 
@@ -75,7 +76,7 @@ describe('Client', () => {
       const variables = {id: '123'};
       const result = {data: {node: {id: '123'}}};
       const request = nock(endpoint)
-        .post('/', body => {
+        .post('/', (body: any) => {
           return (
             String(body).includes('Content-Disposition: form-data; name="variables"\r\n\r\n{"id":"123"}') &&
             String(body).includes(`Content-Disposition: form-data; name="query"\r\n\r\n${query}`) &&
@@ -106,7 +107,7 @@ describe('Client', () => {
       const variables = {id: '123'};
       const result = {data: {node: {id: '123'}}};
       const request = nock(endpoint)
-        .post('/', body => {
+        .post('/', (body: any) => {
           return (
             String(body).includes('Content-Disposition: form-data; name="variables"\r\n\r\n{"id":"123"}') &&
             String(body).includes(`Content-Disposition: form-data; name="query"\r\n\r\n${query}`) &&
@@ -134,12 +135,12 @@ describe('Client', () => {
     /* eslint-disable no-unused-vars */
     expect(() => {
       // $FlowFixMe:
-      const client = new Client();
+      const client = new Client(null);
     }).to.throw('You have to provide the endpoint of the GraphQL server to the client');
     
     expect(() => {
       // $FlowFixMe
-      const client = new Client({endpoint: 213});
+      const client = new Client({endpoint: null});
     }).to.throw('You have to provide the endpoint of the GraphQL server to the client');
     /* eslint-enable no-unused-vars */
   });

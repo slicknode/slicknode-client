@@ -1,10 +1,8 @@
 /**
  * Created by Ivo Meißner on 05.08.17.
- *
- * @flow
  */
 
-import type Client, {Authenticator} from '../index';
+import Client, {Authenticator} from '../index';
 
 export default function (email: string, password: string): Authenticator {
   return async (client: Client) => {
@@ -19,7 +17,7 @@ export default function (email: string, password: string): Authenticator {
         refreshTokenLifetime
       }
     }`;
-    const result = await client.fetch(query, {email, password});
+    const result = await client.fetch(query, {email, password}) as any;
     if (result.data && result.data.tokenSet) {
       return result.data.tokenSet;
     }

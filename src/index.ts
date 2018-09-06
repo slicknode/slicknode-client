@@ -14,11 +14,31 @@ const ACCESS_TOKEN_EXPIRES_KEY = ':auth:accessTokenExpires';
 
 const DEFAULT_NAMESPACE = 'slicknode';
 
+declare global {
+  namespace NodeJS {
+    interface  Global {
+      localStorage: Storage;
+    }
+  }
+}
+
+// @TODO: Improve typing
+// We overwrite FormData to support Buffer | Blob | File | string as file uploads
+interface FormData {
+  append(name: string, value: Uploadable, fileName?: string): void;
+  delete(name: string): void;
+  get(name: string): FormDataEntryValue | null;
+  getAll(name: string): FormDataEntryValue[];
+  has(name: string): boolean;
+  set(name: string, value: string | Blob, fileName?: string): void;
+  forEach(callbackfn: (value: FormDataEntryValue, key: string, parent: FormData) => void, thisArg?: any): void;
+}
+
 /**
  * Interface for custom storage
  */
 export interface Storage {
-  getItem(keyName: string): ?string;
+  getItem(keyName: string): string | null;
   setItem(keyName: string, keyValue: string): void;
   removeItem(keyName: string): void;
   clear(): void;
@@ -41,27 +61,27 @@ export type ClientOptions = {
    * The slicknode GraphQL endpoint URL
    */
   endpoint: string,
-  
+
   /**
    * Headers to be sent with each request
    */
-  headers?: Object,
-  
+  headers?: HeadersInit,
+
   /**
    * Options that are passed to the fetch() call
    */
-  options?: Object,
-  
+  options?: RequestInit,
+
   /**
    * The storage interface to store auth tokens, default is localStorage
    */
   storage?: Storage,
-  
+
   /**
    * The namespace under which auth tokens are stored
    */
   namespace?: string,
-  
+
   /**
    * Use a permanent access token for authentication
    */
@@ -81,11 +101,11 @@ export const REFRESH_TOKEN_MUTATION = `mutation refreshToken($token: String!) {
  * In memory storage
  */
 export class MemoryStorage {
-  values: Object;
+  values: {[key: string]: string};
   constructor() {
     this.values = {};
   }
-  getItem(keyName: string): ?string {
+  getItem(keyName: string): string | null {
     return this.values.hasOwnProperty(keyName) ? this.values[keyName] : null;
   }
   setItem(keyName: string, keyValue: string): void {
@@ -103,7 +123,7 @@ export default class Client {
   options: ClientOptions;
   storage: Storage;
   namespace: string;
-  
+
   /**
    * Constructor
    * @param options
@@ -116,7 +136,7 @@ export default class Client {
     this.namespace = options.namespace || DEFAULT_NAMESPACE;
     this.storage = options.storage || global.localStorage || new MemoryStorage();
   }
-  
+
   /**
    * Sends a query to the GraphQL endpoint and returns a promise that
    * resolves to the returned data
@@ -129,13 +149,13 @@ export default class Client {
    */
   async fetch(
     query: string,
-    variables?: Object = {},
-    operationName?: ?string = null,
-    files?: UploadableMap = {}
+    variables: Object = {},
+    operationName: string | null = null,
+    files: UploadableMap = {}
   ): Promise<Object> {
     const authHeaders = query !== REFRESH_TOKEN_MUTATION ? await this.getAuthHeaders() : {};
-    
-    const config: Object = {
+
+    const config: RequestInit = {
       method: 'POST',
       headers: {
         ...authHeaders,
@@ -143,10 +163,10 @@ export default class Client {
       },
       credentials: 'same-origin',
     };
-    
+
     // We have files, send request as multipart
     if (files && Object.keys(files).length > 0) {
-      const data = new FormData();
+      const data = new FormData() as FormData;
       Object.keys(files).forEach((name => {
         const file = files[name];
         // If we have buffer or string, add filename
@@ -159,7 +179,7 @@ export default class Client {
         }
       }));
       data.append('query', query);
-      data.append('variables', JSON.stringify(variables));
+      data.append('variables', JSON.stringify(variables || {}));
       if (operationName) {
         data.append('operationName', operationName);
       }
@@ -171,29 +191,32 @@ export default class Client {
         variables: variables || {},
         ...(operationName ? {operationName} : {})
       });
-      config.headers['Content-Type'] = 'application/json';
-      config.headers['Accept'] = 'application/json';
+      config.headers = {
+        ...config.headers,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
     }
-    
+
     const result = await fetch(
       this.options.endpoint,
       config
     );
     return await result.json();
   }
-  
+
   /**
    * Returns a promise that resolves the response of the authenticator
    *
    * @param authenticator
    * @returns {Promise.<*>}
    */
-  async authenticate(authenticator: Authenticator): Promise<*> {
+  async authenticate(authenticator: Authenticator): Promise<AuthTokenSet> {
     const tokenSet = await authenticator(this);
     this.setAuthTokenSet(tokenSet);
     return tokenSet;
   }
-  
+
   /**
    * Returns true if the client has a valid access token
    *
@@ -202,7 +225,7 @@ export default class Client {
   hasAccessToken(): boolean {
     return Boolean(this.getAccessToken());
   }
-  
+
   /**
    * Returns true if the client has a valid refresh token
    *
@@ -211,7 +234,7 @@ export default class Client {
   hasRefreshToken(): boolean {
     return Boolean(this.getRefreshToken());
   }
-  
+
   /**
    * Updates the auth token set
    * @param token
@@ -222,7 +245,7 @@ export default class Client {
     this.setRefreshToken(token.refreshToken);
     this.setRefreshTokenExpires(token.refreshTokenLifetime * 1000 + Date.now());
   }
-  
+
   /**
    * Stores the refreshToken in the storage of the client
    * @param token
@@ -236,18 +259,18 @@ export default class Client {
    * Returns the refresh token, NULL if none was stored yet
    * @returns {string|null}
    */
-  getRefreshToken(): ?string {
+  getRefreshToken(): string | null {
     if ((this.getRefreshTokenExpires() || 0) < Date.now()) {
       return null;
     }
     const key = this.namespace + REFRESH_TOKEN_KEY;
     return this.storage.getItem(key);
   }
-  
+
   /**
    * Sets the time when the auth token expires
    */
-  setAccessTokenExpires(timestamp: ?number) {
+  setAccessTokenExpires(timestamp: number | null) {
     const key = this.namespace + ACCESS_TOKEN_EXPIRES_KEY;
     if (timestamp) {
       this.storage.setItem(key, String(timestamp));
@@ -255,37 +278,37 @@ export default class Client {
       this.storage.removeItem(key);
     }
   }
-  
+
   /**
    * Returns the UNIX Timestamp when the refresh token expires
    * @returns {number|null}
    */
-  getRefreshTokenExpires(): ?number {
+  getRefreshTokenExpires(): number | null {
     const key = this.namespace + REFRESH_TOKEN_EXPIRES_KEY;
     const expires = this.storage.getItem(key);
     return expires ? parseInt(expires, 10) : null;
   }
-  
+
   /**
    * Sets the time when the auth token expires
    */
   setRefreshTokenExpires(
-    timestamp: ?number
+    timestamp: number | null
   ): void {
     const key = this.namespace + REFRESH_TOKEN_EXPIRES_KEY;
     this.storage.setItem(key, String(timestamp));
   }
-  
+
   /**
    * Returns the UNIX Timestamp when the access token expires
    * @returns {number|null}
    */
-  getAccessTokenExpires(): ?number {
+  getAccessTokenExpires(): number | null {
     const key = this.namespace + ACCESS_TOKEN_EXPIRES_KEY;
     const expires = this.storage.getItem(key) || null;
     return expires ? parseInt(expires, 10) : null;
   }
-  
+
   /**
    * Writes the access token to storage
    * @param token
@@ -294,12 +317,12 @@ export default class Client {
     const key = this.namespace + ACCESS_TOKEN_KEY;
     this.storage.setItem(key, token);
   }
-  
+
   /**
    * Returns the access token, NULL if no valid token was found
    * @returns {null}
    */
-  getAccessToken(): ?string {
+  getAccessToken(): string | null {
     // Check if is expired
     if ((this.getAccessTokenExpires() || 0) < Date.now()) {
       return null;
@@ -307,7 +330,7 @@ export default class Client {
     const key = this.namespace + ACCESS_TOKEN_KEY;
     return this.storage.getItem(key) || null;
   }
-  
+
   /**
    * Clears all tokens in the storage
    */
@@ -317,20 +340,20 @@ export default class Client {
     this.storage.removeItem(this.namespace + ACCESS_TOKEN_KEY);
     this.storage.removeItem(this.namespace + ACCESS_TOKEN_EXPIRES_KEY);
   }
-  
+
   /**
    * Returns the headers that are required to authenticate at the GraphQL endpoint.
    * If no access tokens are available, an attempt is made to retrieve it from the backend
    * with the refreshToken
    */
-  async getAuthHeaders(): Promise<Object> {
+  async getAuthHeaders(): Promise<HeadersInit> {
     let accessToken = this.options.accessToken || this.getAccessToken();
     const refreshToken = this.getRefreshToken();
-    
+
     // We have no token, try to get it from API
     if (!accessToken && refreshToken) {
       // We have refresh token but expired auth token. Refresh auth token set.
-      const result = await this.fetch(REFRESH_TOKEN_MUTATION, {token: refreshToken});
+      const result = await this.fetch(REFRESH_TOKEN_MUTATION, {token: refreshToken}) as any;
       if (result && result.data && result.data.refreshAuthToken) {
         this.setAuthTokenSet(result.data.refreshAuthToken);
         accessToken = this.getAccessToken();
@@ -338,13 +361,13 @@ export default class Client {
         this.logout();
       }
     }
-    
+
     if (accessToken) {
       return {
         Authorization: `Bearer ${accessToken}`
       };
     }
-    
+
     return {};
   }
 }
