@@ -27,7 +27,7 @@
     "README.md",
     "LICENSE"
   ],
-  "repository": "ivome/slicknode-client",
+  "repository": "slicknode/slicknode-client",
   "keywords": [
     "graphql",
     "slicknode"
