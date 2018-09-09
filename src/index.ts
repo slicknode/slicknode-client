@@ -51,6 +51,19 @@ export type AuthTokenSet = {
   refreshTokenLifetime: number
 }
 
+export type ResponseError = {
+  message: string,
+  locations?: Array<{
+    line: number,
+    column: number
+  }>
+}
+
+export type Response<TData = {[key: string]: any}> = {
+  data: TData | null,
+  errors?: ResponseError[]
+}
+
 export type Authenticator = (client: Client) => Promise<AuthTokenSet>;
 
 export type Uploadable = File | Blob | Buffer | string;
@@ -147,12 +160,12 @@ export default class Client {
    * @param files
    * @returns {Promise.<void>}
    */
-  async fetch(
+  async fetch<TData = {[field: string]: any}>(
     query: string,
-    variables: Object = {},
+    variables: {[key: string]: any} = {},
     operationName: string | null = null,
     files: UploadableMap = {}
-  ): Promise<Object> {
+  ): Promise<Response<TData>> {
     const authHeaders = query !== REFRESH_TOKEN_MUTATION ? await this.getAuthHeaders() : {};
 
     const config: RequestInit = {
@@ -353,7 +366,10 @@ export default class Client {
     // We have no token, try to get it from API
     if (!accessToken && refreshToken) {
       // We have refresh token but expired auth token. Refresh auth token set.
-      const result = await this.fetch(REFRESH_TOKEN_MUTATION, {token: refreshToken}) as any;
+      const result = await this.fetch<{refreshAuthToken: AuthTokenSet | null}>(
+        REFRESH_TOKEN_MUTATION,
+        {token: refreshToken}
+      );
       if (result && result.data && result.data.refreshAuthToken) {
         this.setAuthTokenSet(result.data.refreshAuthToken);
         accessToken = this.getAccessToken();
