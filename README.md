@@ -18,7 +18,7 @@ The client can be installed via npm:
 
 ## Why Slicknode Client?
 
-While you can certainly send GraphQL queries using any GraphQL client, Slicknode client simplifies the management
+While you can use any GraphQL client to send queries to a Slicknode GraphQL server, Slicknode client simplifies the management
 of auth tokens that you would otherwise have to manually set in your client. It keeps track of token expiration times
 and automatically refreshes them in the background without interruption. 
 
@@ -91,6 +91,16 @@ client.authenticate(loginEmailPassword(email, password))
   })
   .catch(err => {
     console.log('Login failed', err.message);
+  });
+
+
+// To log a user out
+client.logout()
+  .then(() => {
+    console.log('Logout successful');
+  })
+  .catch(err => {
+    console.log('Something went wrong: ', err.message);
   });
 ```
 
