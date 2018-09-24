@@ -110,6 +110,12 @@ export const REFRESH_TOKEN_MUTATION = `mutation refreshToken($token: String!) {
   }
 }`;
 
+export const LOGOUT_MUTATION = `mutation logout($refreshToken: String) {
+  logoutUser(input:{refreshToken:$refreshToken}) {
+  	success
+	}
+}`;
+
 /**
  * In memory storage
  */
@@ -347,11 +353,14 @@ export default class Client {
   /**
    * Clears all tokens in the storage
    */
-  logout(): void {
+  async logout(): Promise<void> {
+    const refreshToken = this.getRefreshToken();
     this.storage.removeItem(this.namespace + REFRESH_TOKEN_KEY);
     this.storage.removeItem(this.namespace + REFRESH_TOKEN_EXPIRES_KEY);
     this.storage.removeItem(this.namespace + ACCESS_TOKEN_KEY);
     this.storage.removeItem(this.namespace + ACCESS_TOKEN_EXPIRES_KEY);
+
+    await this.fetch(LOGOUT_MUTATION, {refreshToken});
   }
 
   /**

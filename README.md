@@ -1,6 +1,11 @@
 # Slicknode GraphQL Client
 
-A lightweight client to make requests to a slicknode GraphQL server.
+A lightweight client to make requests to a slicknode GraphQL server. Sends GraphQL queries while automatically
+adding authentication headers, refreshing access tokens in the background on expiration and with support
+for authenticators. 
+
+**Note:** If you are looking for a client to build a frontend application, we recommend using [slicknode-apollo](https://github.com/slicknode/slicknode-apollo),
+the Slicknode version of the [Apollo Client](https://www.apollographql.com/client) with auth support and recommended defaults. 
 
 ## Installation
 
@@ -52,7 +57,7 @@ if `localStorage` is not available in the current runtime (e.g. NodeJS).
 #### Example: Email password login
 
 ```javascript
-import loginEmailPassword from 'slicknode-client/auth/email-password';
+import loginEmailPassword from 'slicknode-auth-email-password';
 import Client from 'slicknode-client';
 
 const email = 'info@slicknode.com';
@@ -71,11 +76,11 @@ client.authenticate(loginEmailPassword(email, password))
 
 You can use any of the following authentication adapters or build your own: 
 
-- [Email / Password login](src/auth/email-password.md)
+- **[Email / Password](https://github.com/slicknode/slicknode-auth-email-password):** Authentication with
+email address and password
 
 Once a user is authenticated, the slicknode client automatically takes care of
 refreshing the access token in the background.
 
-The auth token set consists of an access token (to make the actual requests) and a refresh
-token along with expiration times. Those are returned by every authentication mutation
-in a slicknode backend. 
+To learn more about authentication and auth tokens for Slicknode servers, check out the section for authentication in
+the Slicknode documentation. 

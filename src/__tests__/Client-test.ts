@@ -6,6 +6,7 @@
 
 import nock from 'nock';
 import Client, {
+  LOGOUT_MUTATION,
   REFRESH_TOKEN_MUTATION
 } from '../index';
 import { expect } from 'chai';
@@ -215,40 +216,49 @@ describe('Client', () => {
     runTest().then(done).catch(done);
   });
   
-  it('Should clear tokens on logout', done => {
-    async function runTest() {
-      const client = new Client({endpoint});
-      
-      const accessToken = '12345abcde';
-      const query = 'query Node($id: ID!) { node(id: $id) {id: "123"}}';
-      const variables = {id: '123'};
-      const result = {data: {node: {id: '123'}}};
-      const request = nock(endpoint, {
-        badheaders: [ 'Authorization' ]
+  it('Should clear tokens on logout', async () => {
+    const client = new Client({endpoint});
+
+    const accessToken = '12345abcde';
+    const refreshToken = 'refreshToken123';
+
+    const logoutVariables = {refreshToken};
+    const logoutResult = {data: {logoutUser: {success: true}}};
+    const logoutRequest = nock(endpoint)
+      .post('/', {
+        query: LOGOUT_MUTATION,
+        variables: logoutVariables
       })
-        .post('/', {
-          query,
-          variables
-        })
-        .reply(200, result);
-      
-      client.setAuthTokenSet({
-        accessToken,
-        accessTokenLifetime: 10,
-        refreshToken: '213',
-        refreshTokenLifetime: 10
-      });
-      client.logout();
-      
-      const clientResult = await client.fetch(
+      .reply(200, logoutResult);
+
+    client.setAuthTokenSet({
+      accessToken,
+      accessTokenLifetime: 10,
+      refreshToken: refreshToken,
+      refreshTokenLifetime: 10
+    });
+    await client.logout();
+    logoutRequest.done();
+
+    const query = 'query Node($id: ID!) { node(id: $id) {id: "123"}}';
+    const variables = {id: '123'};
+    const result = {data: {node: {id: '123'}}};
+    const request = nock(endpoint, {
+      badheaders: [ 'Authorization' ]
+    })
+      .post('/', {
         query,
         variables
-      );
-      
-      request.done();
-      expect(result).to.deep.equal(clientResult);
-    }
-    runTest().then(done).catch(done);
+      })
+      .reply(200, result);
+
+    const clientResult = await client.fetch(
+      query,
+      variables
+    );
+
+    request.done();
+    expect(result).to.deep.equal(clientResult);
   });
   
   it('Should not send expired access token in header', done => {
