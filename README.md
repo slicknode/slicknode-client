@@ -1,5 +1,8 @@
 # Slicknode GraphQL Client
 
+[![npm version](https://badge.fury.io/js/slicknode-client.svg)](https://badge.fury.io/js/slicknode-client) 
+[![CircleCI](https://circleci.com/gh/slicknode/slicknode-client.svg?style=shield)](https://circleci.com/gh/slicknode/slicknode-client)
+
 A lightweight client to make requests to a slicknode GraphQL server. Sends GraphQL queries while automatically
 adding authentication headers, refreshing access tokens in the background on expiration and with support
 for authenticators. 
