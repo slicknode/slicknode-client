@@ -6,6 +6,8 @@
 
 import 'isomorphic-fetch';
 import 'isomorphic-form-data';
+import {DocumentNode} from 'graphql/language/ast';
+import {print} from 'graphql/language/printer';
 
 const REFRESH_TOKEN_KEY = ':auth:refreshToken';
 const REFRESH_TOKEN_EXPIRES_KEY = ':auth:refreshTokenExpires';
@@ -167,12 +169,14 @@ export default class Client {
    * @returns {Promise.<void>}
    */
   async fetch<TData = {[field: string]: any}>(
-    query: string,
+    query: string | DocumentNode,
     variables: {[key: string]: any} = {},
     operationName: string | null = null,
     files: UploadableMap = {}
   ): Promise<Response<TData>> {
     const authHeaders = query !== REFRESH_TOKEN_MUTATION ? await this.getAuthHeaders() : {};
+
+    const gqlQueryString = typeof query === 'string' ? query : print(query);
 
     const config: RequestInit = {
       method: 'POST',
@@ -197,7 +201,7 @@ export default class Client {
           data.append(name, file);
         }
       }));
-      data.append('query', query);
+      data.append('query', gqlQueryString);
       data.append('variables', JSON.stringify(variables || {}));
       if (operationName) {
         data.append('operationName', operationName);
@@ -206,7 +210,7 @@ export default class Client {
     } else {
       // Send as normal POST request
       config.body = JSON.stringify({
-        query,
+        query: gqlQueryString,
         variables: variables || {},
         ...(operationName ? {operationName} : {})
       });

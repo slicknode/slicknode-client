@@ -22,7 +22,9 @@
     "isomorphic-fetch": "^2.2.1",
     "isomorphic-form-data": "^1.0.0"
   },
-  "peerDependencies": {},
+  "peerDependencies": {
+    "graphql": "^14.0.0 || ^15.0.0"
+  },
   "files": [
     "dist",
     "README.md",

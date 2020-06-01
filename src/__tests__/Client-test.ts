@@ -11,6 +11,7 @@ import Client, {
 } from '../index';
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
+import {parse, print} from 'graphql';
 
 const endpoint = 'https://dummyhost';
 
@@ -18,7 +19,7 @@ describe('Client', () => {
   it('Should send a request without auth tokens', done => {
     async function runTest() {
       const client = new Client({endpoint});
-      const query = 'query Node($id: ID!) { node(id: $id) {id: "123"}}';
+      const query = 'query Node($id: ID!) { node(id: $id) {id}}';
       const variables = {id: '123'};
       const result = {data: {node: {id: '123'}}};
       const request = nock(endpoint, {
@@ -40,7 +41,34 @@ describe('Client', () => {
     }
     runTest().then(done).catch(done);
   });
-  
+
+  it('converts GraphQL DocumentNode to query string', done => {
+    async function runTest() {
+      const client = new Client({endpoint});
+      const query = parse('query Node($id: ID!) { node(id: $id) {id}}');
+      const variables = {id: '123'};
+      const result = {data: {node: {id: '123'}}};
+      const request = nock(endpoint, {
+        badheaders: [ 'Authorization' ]
+      })
+        .post('/', {
+          query: print(query),
+          variables
+        })
+        .reply(200, result);
+
+      const clientResult = await client.fetch(
+        query,
+        variables
+      );
+
+      request.done();
+      expect(result).to.deep.equal(clientResult);
+    }
+    runTest().then(done).catch(done);
+  });
+
+
   it('Should send a request with operationName', done => {
     async function runTest() {
       const client = new Client({endpoint});
@@ -73,7 +101,7 @@ describe('Client', () => {
   it('Should upload files from string', done => {
     async function runTest() {
       const client = new Client({endpoint});
-      const query = 'query Node($id: ID!) { node(id: $id) {id: "123"}}';
+      const query = 'query Node($id: ID!) { node(id: $id) {id}}';
       const variables = {id: '123'};
       const result = {data: {node: {id: '123'}}};
       const request = nock(endpoint)
@@ -95,6 +123,37 @@ describe('Client', () => {
         }
       );
       
+      request.done();
+      expect(result).to.deep.equal(clientResult);
+    }
+    runTest().then(done).catch(done);
+  });
+
+  it('Should upload files from string with GraphQL Query document', done => {
+    async function runTest() {
+      const client = new Client({endpoint});
+      const query = parse('query Node($id: ID!) { node(id: $id) {id}}');
+      const variables = {id: '123'};
+      const result = {data: {node: {id: '123'}}};
+      const request = nock(endpoint)
+        .post('/', (body: any) => {
+          return (
+            String(body).includes('Content-Disposition: form-data; name="variables"\r\n\r\n{"id":"123"}') &&
+            String(body).includes(`Content-Disposition: form-data; name="query"\r\n\r\n${print(query)}`) &&
+            String(body).includes('Content-Disposition: form-data; name="file"; filename="data.bin"\r\nContent-Type: application/octet-stream\r\n\r\nabcdef')
+          );
+        })
+        .reply(200, result);
+
+      const clientResult = await client.fetch(
+        query,
+        variables,
+        null,
+        {
+          file: 'abcdef'
+        }
+      );
+
       request.done();
       expect(result).to.deep.equal(clientResult);
     }

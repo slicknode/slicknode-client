@@ -7,16 +7,16 @@ A lightweight client to make requests to a slicknode GraphQL server. Sends Graph
 adding authentication headers, refreshing access tokens in the background on expiration and with support
 for authenticators. 
 
-**Note:** If you are looking for a client to build a frontend application, we recommend using [slicknode-apollo](https://github.com/slicknode/slicknode-apollo),
+**Note:** If you are looking for a client to build a frontend application, we recommend using [slicknode-apollo-link](https://github.com/slicknode/slicknode-apollo-link),
 the Slicknode version of the [Apollo Client](https://www.apollographql.com/client) with auth support and recommended 
 defaults. 
 
 
 ## Installation
 
-The client can be installed via npm: 
+The client can be installed via npm (GraphQL is a peer dependency): 
 
-    npm install -S slicknode-client
+    npm install -S slicknode-client graphql
 
 
 ## Why Slicknode Client?
@@ -32,6 +32,7 @@ Create a client by providing the slicknode GraphQL endpoint:
 
 ```javascript
 import Client from 'slicknode-client';
+import gql from 'graphql-tag';
 
 const client = new Client({
   endpoint: 'http://myproject.slicknode.com/'
@@ -39,7 +40,7 @@ const client = new Client({
 
 // Now you can start sending GraphQL queries
 const variables = {};
-const query = `query {
+const query = gql`query {
   viewer {
     user {
       email
