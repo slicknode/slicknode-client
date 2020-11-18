@@ -1,6 +1,6 @@
 {
   "name": "slicknode-client",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Lightweight GraphQL client for slicknode GraphQL servers",
   "types": "dist/index.d.ts",
   "main": "dist/index.js",
@@ -18,9 +18,9 @@
     "lib": "./dist"
   },
   "dependencies": {
-    "@types/node": "*",
-    "isomorphic-fetch": "^2.2.1",
-    "isomorphic-form-data": "^1.0.0"
+    "@types/node": "^14.14.8",
+    "isomorphic-fetch": "^3.0.0",
+    "isomorphic-form-data": "^2.0.0"
   },
   "peerDependencies": {
     "graphql": "^14.0.0 || ^15.0.0"
@@ -44,6 +44,7 @@
     "chai": "^4.1.0",
     "eslint": "^4.0.0",
     "eslint-plugin-typescript": "^0.12.0",
+    "graphql": "^15.4.0",
     "mocha": "^3.4.2",
     "nock": "^9.0.14",
     "rimraf": "^2.6.1",
